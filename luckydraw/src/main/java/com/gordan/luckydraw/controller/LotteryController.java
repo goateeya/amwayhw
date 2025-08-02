@@ -36,7 +36,7 @@ public class LotteryController {
     @PreAuthorize("hasRole('USER')")
     public ResponseEntity<List<String>> draw(@PathVariable Long activityId, @RequestParam int times, @RequestHeader("Authorization") String token) {
         String userId = extractUserIdFromToken(token); // 自訂方法解析 JWT
-        List<String> results = service.draw(activityId, userId, times);
+        List<String> results = lotteryService.draw(activityId, userId, times);
         return ResponseEntity.ok(results);
     }
 }

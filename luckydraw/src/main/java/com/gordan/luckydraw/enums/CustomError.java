@@ -6,6 +6,8 @@ public enum CustomError {
     USER_NOT_AUTHORIZED("User not authorized"),
     INVALID_DRAW_REQUEST("Invalid draw request"),
     PROBABILITY_EXCEED("Probability exceed"),
+    MAX_DRAWS_EXCEEDED("Maximum draws exceeded"),
+    USER_IS_DRAWING("User is drawing"),
     ;
 
     private final String message;
