@@ -18,6 +18,10 @@ import com.gordan.luckydraw.repository.PrizeRepository;
 
 @Service
 public class LotteryService {
+    private static final String NO_PRIZE_LABEL = "銘謝惠顧";
+    private static final String USER_DRAW_LOCK_KEY_TEMPLATE = "DRAW_LOCK_%d_%s";
+    private static final String USER_DRAW_COUNT_KEY_TEMPLATE = "ACT_%d_USER_DRAW_COUNT";
+    private static final String PRIZE_STOCK_KEY_TEMPLATE = "ACT_%d_PRIZE_STOCK";
     @Autowired
     private PrizeRepository prizeRepository;
 
@@ -51,8 +55,8 @@ public class LotteryService {
 
     public List<String> draw(Long activityId, String userId, int times) {
         // 實現抽獎邏輯
-        String userDrawLockKey = "DRAW_LOCK_" + activityId + "_" + userId;
-        if (redisTemplate.opsForValue().setIfAbsent(userDrawLockKey, "LOCK", Duration.ofSeconds(times))) {
+        String userDrawLockKey = String.format(USER_DRAW_LOCK_KEY_TEMPLATE, activityId, userId);
+        if (Boolean.TRUE.equals(redisTemplate.opsForValue().setIfAbsent(userDrawLockKey, "LOCK", Duration.ofSeconds(times)))) {
             try {
                 // 檢查用戶是否達到最大抽獎次數
                 Activity activity = activityRepository.findById(activityId)
@@ -60,8 +64,8 @@ public class LotteryService {
                 int maxDraws = activity.getMaxNumberOfDrawsPerUser();
 
                 // 檢查用戶當前抽獎次數
-                String key = "ACT_" + activityId + "_USER_DRAW_COUNT";
-                Integer currentDraws = (Integer) redisTemplate.opsForHash().get(key, userId);
+                String userDrawCountKey = String.format(USER_DRAW_COUNT_KEY_TEMPLATE, activityId);
+                Integer currentDraws = (Integer) redisTemplate.opsForHash().get(userDrawCountKey, userId);
                 if (currentDraws == null) {
                     currentDraws = 0;
                 }
@@ -75,36 +79,54 @@ public class LotteryService {
                     throw new AppException(CustomError.PRIZE_NOT_FOUND);
                 }
 
-                List<String> results = new ArrayList<>();
-                Random random = new Random();
+                // 取得獎品庫存，過濾掉庫存為0的獎品
+                String activityPrizeStockKey = String.format(PRIZE_STOCK_KEY_TEMPLATE, activityId);
+                List<Prize> availablePrizes = new ArrayList<>();
+                for (Prize prize : prizes) {
+                    Object stockObj = redisTemplate.opsForHash().get(activityPrizeStockKey, prize.getId());
+                    long stock = stockObj == null ? 0 : Long.parseLong(stockObj.toString());
+                    if (stock > 0) {
+                        availablePrizes.add(prize);
+                    }
+                }
 
-                // Precompute cumulative probabilities
+                List<String> results = new ArrayList<>();
+                if (availablePrizes.isEmpty()) {
+                    // 全部獎品都沒庫存，直接回傳 NO_PRIZE_LABEL
+                    for (int i = 0; i < times; i++) {
+                        results.add(NO_PRIZE_LABEL);
+                    }
+                    redisTemplate.opsForHash().put(userDrawCountKey, userId, currentDraws + times);
+                    return results;
+                }
+
+                // Precompute cumulative probabilities for available prizes
                 List<Double> cumulativeProbabilities = new ArrayList<>();
                 double cumulative = 0;
-                for (Prize p : prizes) {
-                    cumulative += p.getProbability();
+                for (Prize prize : availablePrizes) {
+                    cumulative += prize.getProbability();
                     cumulativeProbabilities.add(cumulative);
                 }
 
+                Random random = new Random();
                 for (int i = 0; i < times; i++) {
-                    double rand = random.nextDouble();
-                    String result = "銘謝惠顧";
-                    for (int j = 0; j < prizes.size(); j++) {
-                        Prize p = prizes.get(j);
-                        String prizeKey = "ACT_" + activityId + "_PRIZE_STOCK";
+                    double rand = random.nextDouble() * cumulative;
+                    String result = NO_PRIZE_LABEL;
+                    for (int j = 0; j < availablePrizes.size(); j++) {
+                        Prize prize = availablePrizes.get(j);
                         if (rand <= cumulativeProbabilities.get(j)) {
-                            Long stock = redisTemplate.opsForHash().increment(prizeKey, p.getId(), -1);
+                            Long stock = redisTemplate.opsForHash().increment(activityPrizeStockKey, prize.getId(), -1);
                             if (stock < 0) {
-                                redisTemplate.opsForHash().increment(prizeKey, p.getId(), 1);
+                                redisTemplate.opsForHash().increment(activityPrizeStockKey, prize.getId(), 1);
                                 break;
                             }
-                            result = p.getName();
+                            result = prize.getName();
                             break;
                         }
                     }
                     results.add(result);
                 }
-                redisTemplate.opsForHash().put(key, userId, currentDraws + times);
+                redisTemplate.opsForHash().put(userDrawCountKey, userId, currentDraws + times);
                 return results;
             } finally {
                 redisTemplate.delete(userDrawLockKey);
