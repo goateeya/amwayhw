@@ -1,16 +1,8 @@
 package com.gordan.luckydraw.controller;
 
-import com.gordan.luckydraw.enums.ERole;
-import com.gordan.luckydraw.model.LoginRequest;
-import com.gordan.luckydraw.model.SignupRequest;
-import com.gordan.luckydraw.model.JwtResponse;
-import com.gordan.luckydraw.model.MessageResponse;
-import com.gordan.luckydraw.model.User;
-import com.gordan.luckydraw.model.Role;
-import com.gordan.luckydraw.repository.RoleRepository;
-import com.gordan.luckydraw.repository.UserRepository;
-import com.gordan.luckydraw.security.jwt.JwtUtils;
-import com.gordan.luckydraw.security.UserDetailsImpl;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -20,12 +12,24 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
+import com.gordan.luckydraw.enums.CustomError;
+import com.gordan.luckydraw.enums.ERole;
+import com.gordan.luckydraw.exception.AppException;
+import com.gordan.luckydraw.model.Role;
+import com.gordan.luckydraw.model.User;
+import com.gordan.luckydraw.model.payload.JwtResponse;
+import com.gordan.luckydraw.model.payload.LoginRequest;
+import com.gordan.luckydraw.model.payload.MessageResponse;
+import com.gordan.luckydraw.model.payload.SignupRequest;
+import com.gordan.luckydraw.repository.RoleRepository;
+import com.gordan.luckydraw.repository.UserRepository;
+import com.gordan.luckydraw.security.UserDetailsImpl;
+import com.gordan.luckydraw.security.jwt.JwtUtils;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -54,7 +58,7 @@ public class AuthController {
         UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
         List<String> roles = userDetails.getAuthorities().stream()
                 .map(item -> item.getAuthority())
-                .collect(Collectors.toList());
+                .toList();
         return ResponseEntity.ok(new JwtResponse(jwt,
                 userDetails.getId(),
                 userDetails.getUsername(),
@@ -66,14 +70,10 @@ public class AuthController {
     @PostMapping("/user")
     public ResponseEntity<?> registerUser(@RequestBody SignupRequest signUpRequest) {
         if (userRepository.existsByUsername(signUpRequest.getUsername())) {
-            return ResponseEntity
-                    .badRequest()
-                    .body(new MessageResponse("Error: Username is already taken!"));
+            throw new AppException(CustomError.USERNAME_ALREADY_EXISTS);
         }
         if (userRepository.existsByEmail(signUpRequest.getEmail())) {
-            return ResponseEntity
-                    .badRequest()
-                    .body(new MessageResponse("Error: Email is already in use!"));
+            throw new AppException(CustomError.EMAIL_ALREADY_EXISTS);
         }
         // Create new user's account
         User user = new User(signUpRequest.getUsername(),
@@ -83,17 +83,17 @@ public class AuthController {
         Set<Role> roles = new HashSet<>();
         if (strRoles == null) {
             Role userRole = roleRepository.findByName(ERole.ROLE_USER)
-                    .orElseThrow(() -> new RuntimeException("Error: Role is not found."));
+                    .orElseThrow(() -> new AppException(CustomError.ROLE_NOT_FOUND));
             roles.add(userRole);
         } else {
             strRoles.forEach(role -> {
                 if (role.equals("admin")) {
                     Role adminRole = roleRepository.findByName(ERole.ROLE_ADMIN)
-                            .orElseThrow(() -> new RuntimeException("Error: Role is not found."));
+                            .orElseThrow(() -> new AppException(CustomError.ROLE_NOT_FOUND));
                     roles.add(adminRole);
                 } else {
                     Role userRole = roleRepository.findByName(ERole.ROLE_USER)
-                            .orElseThrow(() -> new RuntimeException("Error: Role is not found."));
+                            .orElseThrow(() -> new AppException(CustomError.ROLE_NOT_FOUND));
                     roles.add(userRole);
                 }
             });

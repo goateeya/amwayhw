@@ -12,7 +12,7 @@ public class BCryptPasswordEncoderTest {
     @Test
     void testEncodePassword() {
         BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
-        String rawPassword = "123";
+        String rawPassword = "000000";
         String encodedPassword = encoder.encode(rawPassword);
         log.info("Encoded password: " + encodedPassword);
         assertTrue(encodedPassword.startsWith("$2a$"));

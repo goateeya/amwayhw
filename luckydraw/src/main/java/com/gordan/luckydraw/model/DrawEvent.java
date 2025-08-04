@@ -6,11 +6,15 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Table;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Entity
+@Table(name = "draw_events")
 @Data
-public class DrawLog {
+@NoArgsConstructor
+public class DrawEvent {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long drawId;
@@ -20,7 +24,7 @@ public class DrawLog {
     private String prizeName;
     private LocalDateTime drawTime;
 
-    public DrawLog(String userId, Long activityId, Long prizeId, String prizeName) {
+    public DrawEvent(String userId, Long activityId, Long prizeId, String prizeName) {
         this.userId = userId;
         this.activityId = activityId;
         this.prizeId = prizeId;

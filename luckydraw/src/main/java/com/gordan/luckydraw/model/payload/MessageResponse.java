@@ -1,4 +1,4 @@
-package com.gordan.luckydraw.model;
+package com.gordan.luckydraw.model.payload;
 
 import lombok.Data;
 
