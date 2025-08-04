@@ -1,15 +1,18 @@
 package com.gordan.luckydraw.model;
 
-import org.springframework.data.annotation.Id;
-import org.springframework.data.annotation.Version;
+import jakarta.persistence.Id;
+import jakarta.persistence.Version;
 
 import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
 import lombok.Data;
 
 @Entity
 @Data
 public class Prize {
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     private String name;
     private int stock;
