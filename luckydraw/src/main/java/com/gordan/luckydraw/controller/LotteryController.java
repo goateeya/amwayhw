@@ -50,7 +50,7 @@ public class LotteryController {
     // 抽獎 API
     @PostMapping("/draw/{activityId}")
     @PreAuthorize("hasRole('USER')")
-    public ResponseEntity<List<String>> draw(@PathVariable Long activityId, @RequestParam int drawTimes,
+    public ResponseEntity<List<String>> draw(@PathVariable Long activityId, @RequestParam(name = "times") int drawTimes,
             @RequestHeader("Authorization") String token) {
         String userId = jwtUtils.getUserNameFromJwtToken(token);
         List<String> results = lotteryService.draw(activityId, userId, drawTimes);
