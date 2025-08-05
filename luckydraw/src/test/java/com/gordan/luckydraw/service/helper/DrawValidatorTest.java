@@ -1,15 +1,20 @@
 package com.gordan.luckydraw.service.helper;
 
-import com.gordan.luckydraw.exception.AppException;
-import com.gordan.luckydraw.model.Activity;
-import com.gordan.luckydraw.model.Prize;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.util.ArrayList;
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
+
+import com.gordan.luckydraw.enums.CustomError;
+import com.gordan.luckydraw.exception.AppException;
+import com.gordan.luckydraw.model.Activity;
+import com.gordan.luckydraw.model.Prize;
 
 class DrawValidatorTest {
     private DrawValidator validator;
@@ -55,5 +60,20 @@ class DrawValidatorTest {
     @Test
     void testValidateProbabilityExceedNoException() {
         assertDoesNotThrow(() -> validator.validateProbabilityExceed(0.9));
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = { -5, -1, 0 })
+    @DisplayName("validateDrawTimes throws for negative and zero values")
+    void testValidateDrawTimesThrows(int drawTimes) {
+        AppException ex = assertThrows(AppException.class, () -> new DrawValidator().validateDrawTimes(drawTimes));
+        assertEquals(CustomError.INVALID_DRAW_REQUEST, ex.getCustomError());
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = { 1, 5, 100 })
+    @DisplayName("validateDrawTimes does not throw for positive values")
+    void testValidateDrawTimesPass(int drawTimes) {
+        assertDoesNotThrow(() -> new DrawValidator().validateDrawTimes(drawTimes));
     }
 }

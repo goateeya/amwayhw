@@ -30,4 +30,13 @@ public class DrawValidator {
             throw new AppException(CustomError.PROBABILITY_EXCEED);
         }
     }
+
+    public void validateDrawTimes(int drawTimes) {
+        if (drawTimes < 0) {
+            throw new AppException(CustomError.INVALID_DRAW_REQUEST);
+        }
+        if (drawTimes == 0) {
+            throw new AppException(CustomError.INVALID_DRAW_REQUEST);
+        }
+    }
 }

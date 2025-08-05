@@ -75,7 +75,8 @@ public class LotteryService {
     }
 
     public List<String> draw(Long activityId, String userId, int drawTimes) {
-        // 實現抽獎邏輯
+        drawValidator.validateDrawTimes(drawTimes);
+        
         String userDrawLockKey = RedisKeyTemplate.USER_DRAW_LOCK_KEY.format(activityId,
                 userId);
         if (!tryToGetUserDrawLock(userDrawLockKey)) {
